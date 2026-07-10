@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import datetime
 from pathlib import Path
-from typing import Optional
+from typing import Callable, Optional, TypeVar
 
 import questionary
 import typer
@@ -10,6 +10,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
+from . import __version__
 from .discovery import (
     clone_github,
     discover_local,
@@ -210,9 +211,16 @@ def print_scan_table(results: list[ScanResult]) -> None:
 # --- steps 4-6: rewrite + push -----------------------------------------------
 
 
+T = TypeVar("T")
+
+
 def select_repos(
-    prompt: str, candidates: list, label, yes: bool, checked: bool = True
-) -> list:
+    prompt: str,
+    candidates: list[T],
+    label: Callable[[T], str],
+    yes: bool,
+    checked: bool = True,
+) -> list[T]:
     if yes:
         return list(candidates)
     choices = [
@@ -237,6 +245,12 @@ def print_caveats(backup_dir: Optional[Path], workdir_hint: bool) -> None:
     if workdir_hint:
         lines.append("• GitHub clones were kept (they hold the rewrite until pushed).")
     console.print(Panel("\n".join(lines), title="Read this", border_style="red"))
+
+
+def _version_callback(value: bool) -> None:
+    if value:
+        console.print(f"pii-scrub {__version__}")
+        raise typer.Exit()
 
 
 @app.command()
@@ -282,6 +296,13 @@ def scrub(
         "--backup-dir",
         help="Where backup bundles go (default: ~/.local/share/pii-scrub/backups).",
     ),
+    version: bool = typer.Option(
+        False,
+        "--version",
+        callback=_version_callback,
+        is_eager=True,
+        help="Print the version and exit.",
+    ),
 ) -> None:
     """Find PII (names/emails) in git commit history, rewrite it out with
     git-filter-repo, and force-push the cleaned history."""
@@ -309,21 +330,21 @@ def scrub(
 
 
 def _scrub_flow(
-    emails,
-    names,
-    new_name,
-    new_email,
-    scrub_names_in_messages,
-    github,
-    path,
-    include_forks,
-    include_archived,
-    limit,
-    dry_run,
-    yes,
-    no_push,
-    workdir,
-    backup_dir,
+    emails: list[str],
+    names: list[str],
+    new_name: Optional[str],
+    new_email: Optional[str],
+    scrub_names_in_messages: bool,
+    github: bool,
+    path: Optional[Path],
+    include_forks: bool,
+    include_archived: bool,
+    limit: int,
+    dry_run: bool,
+    yes: bool,
+    no_push: bool,
+    workdir: Optional[Path],
+    backup_dir: Optional[Path],
 ) -> None:
     interactive = not yes
 

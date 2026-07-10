@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime
+import re
 import shutil
 import sys
 import tempfile
@@ -43,7 +44,10 @@ def write_mailmap(scan: ScanResult, pii: PiiSpec, tmpdir: Path) -> Path:
 
 
 def write_replace_message(pii: PiiSpec, scrub_names: bool, tmpdir: Path) -> Path:
-    lines = [f"{email}==>{pii.new_email}" for email in pii.emails]
+    # Emails are matched case-insensitively (mirrors scan.py); names stay
+    # literal and case-sensitive — they can be ordinary words, and a looser
+    # match would mangle unrelated message text.
+    lines = [f"regex:(?i){re.escape(email)}==>{pii.new_email}" for email in pii.emails]
     if scrub_names:
         lines += [f"{name}==>{pii.new_name}" for name in pii.names]
     path = tmpdir / "replace-message"

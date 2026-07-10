@@ -44,9 +44,12 @@ Key flags:
 | `--github` / `--path DIR` | Source: all your GitHub repos, or a local folder |
 | `--scrub-names-in-messages` | Also replace names inside commit messages (off by default — names can be ordinary words) |
 | `--dry-run` | Scan and report only |
-| `--yes` | No prompts; `--no-push` | rewrite only |
+| `-y/--yes` | No prompts: rewrite and push everything that matched |
+| `--no-push` | Rewrite only, never push |
 | `--include-forks`, `--include-archived` | Widen the GitHub repo set |
+| `--limit N` | Max GitHub repos to list (default 2000) |
 | `--backup-dir`, `--workdir` | Where bundles / GitHub clones go |
+| `--version` | Print the version and exit |
 
 ## How it works
 

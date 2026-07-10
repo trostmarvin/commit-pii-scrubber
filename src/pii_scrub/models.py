@@ -18,10 +18,6 @@ class PiiSpec:
         self.emails = [e.strip().lower() for e in self.emails if e.strip()]
         self.names = [n.strip() for n in self.names if n.strip()]
 
-    @property
-    def has_any(self) -> bool:
-        return bool(self.emails or self.names)
-
 
 @dataclass
 class Repo:
@@ -29,7 +25,6 @@ class Repo:
     path: Path
     origin_url: str | None
     source: Literal["github", "local"]
-    default_branch: str | None = None
     is_empty: bool = False
     notes: list[str] = field(default_factory=list)
     # Reason the rewrite is refused (dirty tree, shallow, ...); None = rewritable.

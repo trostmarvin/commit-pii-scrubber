@@ -131,6 +131,44 @@ def test_rewrite_scrubs_names_in_messages(rig, tmp_path):
     assert f"thanks {NEW_NAME} for the review" in history
 
 
+def test_mixed_case_email_in_message_scrubbed(rig, tmp_path):
+    """Scan matches message emails case-insensitively; the rewrite must too."""
+    mixed = "Old@PII.test"
+    assert mixed.lower() == OLD_EMAIL
+    (rig["work"] / "e.txt").write_text("x")
+    run_git(rig["work"], "add", "e.txt")
+    run_git(
+        rig["work"],
+        "commit",
+        "-m",
+        f"contact {mixed} about this",
+        env=identity_env(CLEAN_NAME, CLEAN_EMAIL),
+    )
+    repos = discover_local(rig["root"])
+    work = next(r for r in repos if r.path == rig["work"])
+    scan = scan_repo(work, PII)
+    assert scan.message_email_hits == 2  # lowercase and mixed-case commits
+
+    rw = rewrite_repo(work, scan, PII, tmp_path / "b", scrub_names_in_messages=False)
+    assert rw.ok, rw.error
+    assert rw.verified_clean
+    history = all_history(rig["work"])
+    assert OLD_EMAIL not in history.lower()
+    assert NEW_EMAIL in history
+
+
+def test_multiple_blockers_reported(rig, tmp_path):
+    """A repo that is both dirty and shallow reports every blocker, not just one."""
+    shallow = tmp_path / "shallow"
+    run_git(tmp_path, "clone", "--depth", "1", f"file://{rig['remote']}", str(shallow))
+    (shallow / "dirty.txt").write_text("uncommitted")
+    repos = discover_local(rig["root"])
+    repo = next(r for r in repos if r.path == shallow)
+    assert repo.rewrite_blocked is not None
+    assert "dirty working tree" in repo.rewrite_blocked
+    assert "shallow clone" in repo.rewrite_blocked
+
+
 def test_dirty_repo_refused(rig, tmp_path):
     (rig["work"] / "dirty.txt").write_text("uncommitted")
     repos = discover_local(rig["root"])

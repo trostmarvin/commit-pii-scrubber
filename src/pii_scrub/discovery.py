@@ -19,7 +19,7 @@ from .models import Repo
 
 GH_FIELDS = (
     "nameWithOwner,name,url,sshUrl,isFork,isArchived,isPrivate,isEmpty,"
-    "defaultBranchRef,viewerPermission"
+    "viewerPermission"
 )
 _PUSHABLE_PERMISSIONS = {"ADMIN", "MAINTAIN", "WRITE"}
 
@@ -30,21 +30,24 @@ _PUSHABLE_PERMISSIONS = {"ADMIN", "MAINTAIN", "WRITE"}
 def build_local_repo(path: Path, name: str) -> Repo:
     repo = Repo(name=name, path=path, origin_url=origin_url(path), source="local")
     repo.is_empty = not has_commits(path)
+    blockers: list[str] = []
     bare = is_bare(path)
     if bare:
         repo.notes.append("bare repository")
     else:
         if is_dirty(path):
             repo.notes.append("dirty working tree")
-            repo.rewrite_blocked = "dirty working tree — commit or stash first"
+            blockers.append("dirty working tree — commit or stash first")
         if is_detached(path):
             repo.notes.append("detached HEAD")
-            repo.rewrite_blocked = "detached HEAD — check out a branch first"
+            blockers.append("detached HEAD — check out a branch first")
         if has_submodules(path):
             repo.notes.append("has submodules")
     if is_shallow(path):
         repo.notes.append("shallow clone")
-        repo.rewrite_blocked = "shallow clone — run 'git fetch --unshallow' first"
+        blockers.append("shallow clone — run 'git fetch --unshallow' first")
+    if blockers:
+        repo.rewrite_blocked = "; ".join(blockers)
     if repo.origin_url is None:
         repo.notes.append("no origin remote (nothing to push)")
     return repo
@@ -108,7 +111,6 @@ def clone_github(entry: dict, workdir: Path) -> Repo:
         path=dest,
         origin_url=origin_url(dest),
         source="github",
-        default_branch=(entry.get("defaultBranchRef") or {}).get("name"),
     )
     repo.is_empty = not has_commits(dest)
     if entry.get("isFork"):
