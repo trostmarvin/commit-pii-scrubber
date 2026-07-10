@@ -1,0 +1,25 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "commit-pii-scrubber"
+version = "0.1.0"
+description = "Scan git repos for PII in commit history and rewrite it with git-filter-repo"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "typer>=0.12",
+    "questionary>=2.0",
+    "rich>=13.0",
+    "git-filter-repo>=2.45",
+]
+
+[project.scripts]
+pii-scrub = "pii_scrub.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/pii_scrub"]
+
+[dependency-groups]
+dev = ["pytest>=8"]
